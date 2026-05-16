@@ -1,0 +1,35 @@
+[
+  {
+    "version":"rx-efficientnetb0-20260515-2b92eec9",
+    "backbone":"efficientnet_b0",
+    "accuracy":0.96,
+    "f1_macro":0.9600785152,
+    "recall_covid":0.98,
+    "recall_neumonia":0.9333333333,
+    "best_val_f1_macro":0.888084355,
+    "test_rows":450,
+    "artifact_dir":"\/app\/models\/radiography\/rx-efficientnetb0-20260515-2b92eec9"
+  },
+  {
+    "version":"rx-resnet18-20260515-d397f8e5",
+    "backbone":"resnet18",
+    "accuracy":0.8933333333,
+    "f1_macro":0.8929190334,
+    "recall_covid":0.9666666667,
+    "recall_neumonia":0.8333333333,
+    "best_val_f1_macro":0.8920645978,
+    "test_rows":450,
+    "artifact_dir":"\/app\/models\/radiography\/rx-resnet18-20260515-d397f8e5"
+  },
+  {
+    "version":"rx-simplecnn-20260515-e8ac76f0",
+    "backbone":"simple_cnn",
+    "accuracy":0.7022222222,
+    "f1_macro":0.7012595535,
+    "recall_covid":0.7,
+    "recall_neumonia":0.7733333333,
+    "best_val_f1_macro":0.6760958109,
+    "test_rows":450,
+    "artifact_dir":"\/app\/models\/radiography\/rx-simplecnn-20260515-e8ac76f0"
+  }
+]

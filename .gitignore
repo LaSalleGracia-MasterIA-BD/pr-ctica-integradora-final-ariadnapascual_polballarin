@@ -1,0 +1,47 @@
+# Datasets grandes / privados / descargables
+COVID-19_Radiography_Dataset/
+COVID-19_Radiography_Dataset.zip
+archive*.zip
+*.zip
+
+# Datos temporales o regenerables
+data/tmp/
+data/raw/
+data/covid-subset/
+data/synthetic/
+data/radiography/
+
+# Pesos pesados de modelos de radiografía
+models/radiography/**/model.pt
+models/radiography/**/best_model.pt
+models/radiography/**/checkpoint*.pt
+models/radiography/current
+
+# Mantener fuera symlinks problemáticos
+models/triage/current
+models/disease/current
+models/radiography/current
+
+# Entorno local
+.env
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+
+# Secretos
+*.pem
+*.key
+# Modelos antiguos o contaminados no versionables
+models/radiography_old/
+models/radiography_contaminated/
+
+# Pesos de modelos en cualquier carpeta
+*.pt
+*.pth
+*.ckpt

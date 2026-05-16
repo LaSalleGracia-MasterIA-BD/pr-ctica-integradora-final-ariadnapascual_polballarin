@@ -1,0 +1,447 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init/postgres:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - hospital-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  minio:
+    image: minio/minio:RELEASE.2024-12-18T13-15-44Z
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    command: server /data --console-address ":9001"
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - hospital-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  minio-init:
+    image: minio/mc:RELEASE.2024-11-21T17-21-54Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      S3_BUCKET_RAW: ${S3_BUCKET_RAW}
+    entrypoint: >
+      /bin/sh -c "
+      set -e;
+      mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD;
+      mc mb --ignore-existing local/$$S3_BUCKET_RAW;
+      mc anonymous set none local/$$S3_BUCKET_RAW;
+      echo 'Bucket listo: '$$S3_BUCKET_RAW;
+      "
+    networks:
+      - hospital-net
+    restart: "no"
+
+  mongodb:
+    image: mongo:8.0
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - mongo-data:/data/db
+      - ./init/mongo:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval \"db.adminCommand('ping')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - hospital-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  dask-scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: pipeline
+    command:
+      [
+        "dask-scheduler",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8786",
+        "--dashboard-address",
+        ":8787"
+      ]
+    ports:
+      - "${DASK_DASHBOARD_PORT:-8787}:8787"
+    networks:
+      - hospital-net
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"from distributed import Client; c=Client('tcp://localhost:8786', timeout='2s'); c.close()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+    restart: on-failure
+
+  dask-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: pipeline
+    command:
+      [
+        "dask-worker",
+        "${DASK_SCHEDULER_ADDRESS:-tcp://dask-scheduler:8786}",
+        "--nworkers",
+        "${DASK_WORKERS:-1}",
+        "--nthreads",
+        "${DASK_THREADS_PER_WORKER:-2}",
+        "--memory-limit",
+        "${DASK_WORKER_MEMORY:-1GB}"
+      ]
+    depends_on:
+      dask-scheduler:
+        condition: service_healthy
+    volumes:
+      - ./data:/app/data
+    networks:
+      - hospital-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+    restart: on-failure
+
+  pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: pipeline
+    depends_on:
+      - postgres
+      - mongodb
+      - minio
+      - dask-scheduler
+    volumes:
+      - ./data:/app/data
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      MONGO_HOST: mongodb
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_DB: ${MONGO_DB}
+      S3_ENDPOINT: ${S3_ENDPOINT}
+      S3_REGION: ${S3_REGION}
+      S3_BUCKET_RAW: ${S3_BUCKET_RAW}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      PIPELINE_PROCESSING_ENGINE: ${PIPELINE_PROCESSING_ENGINE:-dask}
+      DASK_SCHEDULER_ADDRESS: ${DASK_SCHEDULER_ADDRESS:-tcp://dask-scheduler:8786}
+      DASK_CSV_BLOCKSIZE: ${DASK_CSV_BLOCKSIZE:-16MB}
+      DASK_SHARED_TMP_DIR: ${DASK_SHARED_TMP_DIR:-/app/data/tmp/dask}
+    networks:
+      - hospital-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+    restart: on-failure
+
+  ml-inference:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ml-inference
+    depends_on:
+      - mongodb
+    volumes:
+      - ./models:/app/models
+      - ./data:/app/data
+      - ./COVID-19_Radiography_Dataset:/app/COVID-19_Radiography_Dataset:ro
+    ports:
+      - "${ML_INFERENCE_PORT:-8001}:8001"
+    environment:
+      ML_MODEL_PATH: ${ML_MODEL_PATH}
+      ML_DEVICE: ${ML_DEVICE}
+      COVID_ALERT_THRESHOLD: ${COVID_ALERT_THRESHOLD:-0.80}
+    networks:
+      - hospital-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8001/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+    restart: on-failure
+
+  ml-triage:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ml-triage
+    depends_on:
+      - mongodb
+    volumes:
+      - ./models:/app/models
+      - ./data:/app/data
+    environment:
+      ML_TRIAGE_MODEL_PATH: ${ML_TRIAGE_MODEL_PATH}
+      ML_DISEASE_MODEL_PATH: ${ML_DISEASE_MODEL_PATH}
+    networks:
+      - hospital-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8002/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+    restart: on-failure
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+    ports:
+      - "${API_PORT}:8000"
+    depends_on:
+      - postgres
+      - mongodb
+      - ml-inference
+      - ml-triage
+      - minio
+      - dask-scheduler
+    environment:
+      API_LOG_LEVEL: ${API_LOG_LEVEL}
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      MONGO_HOST: mongodb
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_DB: ${MONGO_DB}
+      S3_ENDPOINT: ${S3_ENDPOINT}
+      S3_REGION: ${S3_REGION}
+      S3_BUCKET_RAW: ${S3_BUCKET_RAW}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      PIPELINE_PROCESSING_ENGINE: ${PIPELINE_PROCESSING_ENGINE:-dask}
+      DASK_SCHEDULER_ADDRESS: ${DASK_SCHEDULER_ADDRESS:-tcp://dask-scheduler:8786}
+      DASK_CSV_BLOCKSIZE: ${DASK_CSV_BLOCKSIZE:-16MB}
+      DASK_SHARED_TMP_DIR: ${DASK_SHARED_TMP_DIR:-/app/data/tmp/dask}
+    networks:
+      - hospital-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dashboard
+    ports:
+      - "${DASHBOARD_PORT}:8501"
+    depends_on:
+      - api
+      - ml-inference
+    environment:
+      API_BASE_URL: ${API_BASE_URL:-http://api:8000}
+      ML_INFERENCE_URL: ${ML_INFERENCE_URL:-http://ml-inference:8001}
+    networks:
+      - hospital-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8501/_stcore/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+    restart: on-failure
+
+  automation:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: automation
+    depends_on:
+      - mongodb
+      - api
+    environment:
+      MONGO_HOST: mongodb
+      MONGO_PORT: 27017
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_DB: ${MONGO_DB}
+      AUTOMATION_INTERVAL_SECONDS: 30
+      AUTOMATION_LOOKBACK_MINUTES: 10
+      AUTOMATION_LOG_LEVEL: INFO
+    networks:
+      - hospital-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+    restart: on-failure
+
+  pgadmin:
+    image: dpage/pgadmin4:9
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - hospital-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:80/misc/ping || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+    restart: on-failure
+
+  mongo-express:
+    image: mongo-express:1.0.2
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongodb
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      ME_CONFIG_OPTIONS_EDITORTHEME: default
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mongodb
+    networks:
+      - hospital-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8081 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+    restart: on-failure
+
+  loki:
+    image: grafana/loki:3.2.1
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./monitoring/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    networks:
+      - hospital-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    logging:
+      driver: json-file
+    restart: on-failure
+
+  promtail:
+    image: grafana/promtail:3.2.1
+    user: root
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./monitoring/promtail-config.yaml:/etc/promtail/promtail-config.yaml:ro
+      - promtail-positions:/positions
+    command: -config.file=/etc/promtail/promtail-config.yaml
+    networks:
+      - hospital-net
+    depends_on:
+      loki:
+        condition: service_healthy
+    logging:
+      driver: json-file
+    restart: on-failure
+
+networks:
+  hospital-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  mongo-data:
+  pgadmin-data:
+  minio-data:
+  loki-data:
+  promtail-positions:

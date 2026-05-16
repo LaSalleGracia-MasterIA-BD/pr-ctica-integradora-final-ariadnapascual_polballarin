@@ -1,0 +1,20 @@
+"""Hashing streaming de ficheros (SDD-02 RF-3 catalogación por hash)."""
+from __future__ import annotations
+
+import hashlib
+from typing import BinaryIO
+
+
+def sha256_stream(stream: BinaryIO, chunk_size: int = 1 << 16) -> str:
+    """Calcula SHA-256 leyendo el stream por chunks (evita cargar todo a memoria)."""
+    h = hashlib.sha256()
+    while True:
+        chunk = stream.read(chunk_size)
+        if not chunk:
+            break
+        h.update(chunk)
+    return h.hexdigest()
+
+
+def sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()

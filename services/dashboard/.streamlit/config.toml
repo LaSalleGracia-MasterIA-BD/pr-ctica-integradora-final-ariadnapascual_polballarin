@@ -1,0 +1,21 @@
+# Fuerza tema claro + paleta hospital (blancos, grises y azules).
+# Esto prevalece sobre la preferencia del SO del navegador.
+
+[theme]
+base = "light"
+primaryColor = "#1E3A8A"              # navy — CTA / selected
+backgroundColor = "#FFFFFF"           # fondo principal blanco
+secondaryBackgroundColor = "#F8FAFC"  # tarjetas / tablas
+textColor = "#0F172A"                 # texto principal (gris muy oscuro)
+font = "sans serif"
+
+[server]
+headless = true
+enableCORS = false
+enableXsrfProtection = false
+
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"

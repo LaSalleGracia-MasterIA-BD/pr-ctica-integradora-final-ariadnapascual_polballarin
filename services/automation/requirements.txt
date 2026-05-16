@@ -1,0 +1,2 @@
+# Dependencias para automation (mínimas en este stub)
+pymongo==4.10.1

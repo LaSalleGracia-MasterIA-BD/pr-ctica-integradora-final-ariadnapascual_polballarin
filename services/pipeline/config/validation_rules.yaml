@@ -1,0 +1,88 @@
+version: 1
+
+entities:
+  paciente:
+    # Campos mínimos que toda ficha del formulario/CSV debe traer
+    required_fields:
+      - edad
+      - sexo
+      - motivo_principal
+      - duracion_sintomas
+      - intensidad_dolor
+      - hora_envio
+
+    field_rules:
+      edad:
+        type: int
+        min: 0
+        max: 120
+      sexo:
+        type: enum
+        values: ["M", "F", "Otro"]
+      peso_kg:
+        type: int
+        min: 1
+        max: 500
+        nullable: true
+      altura_cm:
+        type: int
+        min: 40
+        max: 250
+        nullable: true
+      fumador:
+        type: enum
+        values: ["no", "si", "exfumador"]
+        nullable: true
+      embarazo:
+        type: enum
+        values: ["si", "no", "na"]
+        nullable: true
+      motivo_principal:
+        type: enum
+        values:
+          - "dolor_toracico"
+          - "dificultad_respiratoria"
+          - "fiebre"
+          - "dolor_abdominal"
+          - "traumatismo"
+          - "sintomas_neurologicos"
+          - "otro"
+      duracion_sintomas:
+        type: enum
+        values: ["<24h", "1-3d", "4-7d", ">1sem"]
+      intensidad_dolor:
+        type: int
+        min: 0
+        max: 10
+      fiebre_subjetiva:
+        type: enum
+        values: ["no", "leve", "alta"]
+        nullable: true
+      dificultad_respiratoria_subjetiva:
+        type: enum
+        values: ["no", "leve", "moderada", "grave"]
+        nullable: true
+      tos:
+        type: enum
+        values: ["no", "seca", "con_flema"]
+        nullable: true
+      contacto_covid_reciente:
+        type: enum
+        values: ["si", "no", "no_se"]
+        nullable: true
+      hora_envio:
+        type: int
+        min: 0
+        max: 23
+
+    # Reglas cruzadas (simples; `eval` sin builtins sobre el row dict).
+    # Nota: tras el quoting, "no" deja de ser booleano.
+    cross_field_rules:
+      - rule: "sexo != 'F' or embarazo in ('si', 'no', 'na')"
+        severity: warning
+      - rule: "not (sexo == 'M' and embarazo == 'si')"
+        severity: warning
+
+    deduplication:
+      key: pseudo_id
+      policy: first_wins

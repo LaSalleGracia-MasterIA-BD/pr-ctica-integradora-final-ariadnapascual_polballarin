@@ -1,0 +1,51 @@
+{
+  "model_version": "rx-resnet18-20260515-d397f8e5",
+  "backbone": "resnet18",
+  "accuracy": 0.8933333333333333,
+  "f1_macro": 0.8929190334071434,
+  "recall_covid": 0.9666666666666667,
+  "recall_neumonia": 0.8333333333333334,
+  "per_class": {
+    "Sana": {
+      "precision": 0.8461538461538461,
+      "recall": 0.88,
+      "f1": 0.8627450980392157,
+      "support": 150
+    },
+    "Neumonía": {
+      "precision": 0.946969696969697,
+      "recall": 0.8333333333333334,
+      "f1": 0.8865248226950354,
+      "support": 150
+    },
+    "COVID-19": {
+      "precision": 0.8950617283950617,
+      "recall": 0.9666666666666667,
+      "f1": 0.9294871794871795,
+      "support": 150
+    }
+  },
+  "confusion_matrix": [
+    [
+      132,
+      5,
+      13
+    ],
+    [
+      21,
+      125,
+      4
+    ],
+    [
+      3,
+      2,
+      145
+    ]
+  ],
+  "classes": [
+    "Sana",
+    "Neumonía",
+    "COVID-19"
+  ],
+  "test_rows": 450
+}

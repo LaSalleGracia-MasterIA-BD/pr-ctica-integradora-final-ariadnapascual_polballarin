@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git fetch *)",
+      "Bash(git --no-pager show origin/ariadna -- .env.example)",
+      "Bash(git --no-pager show origin/ariadna -- Dockerfile)",
+      "Bash(git --no-pager show origin/ariadna -- init/postgres/init.sql init/mongo/init.js)",
+      "Bash(git --no-pager show origin/ariadna -- README.md)",
+      "Bash(git --no-pager show origin/ariadna -- services/api/app/main.py services/pipeline/main.py services/dashboard/app.py services/ml-inference/app/app.py services/automation/main.py)",
+      "Bash(git --no-pager diff pol origin/ariadna -- specs/DESIGN-01-arquitectura.md)",
+      "Bash(git --no-pager diff pol origin/ariadna -- CHANGELOG.md)",
+      "Bash(git --no-pager diff pol origin/ariadna -- CONTEXT.md)",
+      "Bash(git merge *)",
+      "Bash(git add *)",
+      "Bash(python -m training.generate_dataset --n 10000 --seed 42 --output ../../data/synthetic/triage/)",
+      "Bash(python -m training.train --data ../../data/synthetic/triage/ --output ../../models/triage/ --seed 42)"
+    ]
+  }
+}
