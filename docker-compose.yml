@@ -262,6 +262,8 @@ services:
       - ml-triage
       - minio
       - dask-scheduler
+    volumes:
+      - ./data:/app/data
     environment:
       API_LOG_LEVEL: ${API_LOG_LEVEL}
       POSTGRES_HOST: postgres
