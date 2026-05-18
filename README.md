@@ -60,7 +60,7 @@ Una vez levantado (`docker compose up -d`), accede a:
 | Servicio | URL | Credenciales | Propósito |
 |----------|-----|--------------|----------|
 | **API** | http://localhost:8000 | — | REST API (healthcheck: `/health`) |
-| **Dashboard** | http://localhost:8501 | — | Streamlit UI con métricas |
+| **Dashboard** | http://localhost:8502 | — | Streamlit UI con métricas |
 | **pgAdmin** | http://localhost:5050 | admin@example.com / change-me | Gestor PostgreSQL |
 | **Mongo Express** | http://localhost:8081 | — | Gestor MongoDB |
 | **Loki** | http://localhost:3100 | — | Centralizador de logs |
