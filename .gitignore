@@ -11,16 +11,16 @@ data/covid-subset/
 data/synthetic/
 data/radiography/
 
-# Pesos pesados de modelos de radiografía
-models/radiography/**/model.pt
-models/radiography/**/best_model.pt
-models/radiography/**/checkpoint*.pt
-models/radiography/current
+# # Pesos pesados de modelos de radiografía
+# models/radiography/**/model.pt
+# models/radiography/**/best_model.pt
+# models/radiography/**/checkpoint*.pt
+# models/radiography/current
 
-# Mantener fuera symlinks problemáticos
-models/triage/current
-models/disease/current
-models/radiography/current
+# # Mantener fuera symlinks problemáticos
+# models/triage/current
+# models/disease/current
+# models/radiography/current
 
 # Entorno local
 .env
@@ -45,3 +45,11 @@ models/radiography_contaminated/
 *.pt
 *.pth
 *.ckpt
+
+# Punteros current problem�ticos en Windows
+models/radiography/current/
+models/radiography/current
+models/triage/current/
+models/triage/current
+models/disease/current/
+models/disease/current

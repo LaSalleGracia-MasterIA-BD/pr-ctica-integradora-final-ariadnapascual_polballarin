@@ -1,0 +1,22 @@
+{
+  "version": "rx-20260515-6d3319c3",
+  "created_at": "2026-05-15T11:30:23.396519Z",
+  "config": {
+    "img_size": 224,
+    "batch_size": 8,
+    "warmup_epochs": 1,
+    "max_epochs": 2,
+    "lr_warmup": 0.001,
+    "lr_finetune": 0.0001,
+    "weight_decay": 0.0001,
+    "seed": 42,
+    "backbone": "efficientnet_b0"
+  },
+  "dataset_hash": "68f941b9a52ee474a6500c68a2e3c8a4d6544a2aeb4d9c8b23eb10084dcb4534",
+  "class_names": [
+    "Sana",
+    "Neumonía",
+    "COVID-19"
+  ],
+  "best_val_f1_macro": 0.2981366459627329
+}
