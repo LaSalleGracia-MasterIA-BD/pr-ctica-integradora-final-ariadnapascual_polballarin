@@ -14,9 +14,9 @@ El enunciado §4.2 exige un pipeline en 4 fases — **ingesta → limpieza → t
 
 *Requisito nuevo que obligó a un diseño explícito.* La IA propuso distinguir **dos tipos de log distintos**:
 - **Logs técnicos** (stdout JSON, recogidos por Loki/Promtail) → destinatario: operador.
-- **Eventos de dominio** (colección `system_events` en Mongo) → destinatario: usuario del dashboard, con mensajes en español legibles.
+- **Eventos de dominio** (colección `system_events` en Mongo) → destinatario: usuario del dashboard, con mensajes en español legibles.*
 
-*Esto tiene impacto arquitectónico:* SDD-07 se actualizó con la separación, SDD-05 añadió tres endpoints nuevos (`POST /batch-runs`, `GET /batch-runs/{run_id}/events`, `GET /batch-runs`), y la API empezó a emitir `system_events` **paralelos** a los logs técnicos por cada evento relevante. La timeline del dashboard se alimenta de esos eventos de dominio.
+*Esto tiene impacto arquitectónico:* SDD-07 se actualizó con la separación, SDD-05 añadió tres endpoints nuevos (`POST /batch-runs`, `GET /batch-runs/{run_id}/events`, `GET /batch-runs`), y la API empezó a emitir `system_events` **paralelos** a los logs técnicos por cada evento relevante. La timeline del dashboard se alimenta de esos eventos de dominio.*
 
 > Y cuando ponemos las reglas del ETL?
 
@@ -28,7 +28,7 @@ El enunciado §4.2 exige un pipeline en 4 fases — **ingesta → limpieza → t
 - Muchos enums no son binarios (sexo tiene 3 valores, fumador 3, embarazo 3, motivo 7, dificultad respiratoria 4…).
 - Ahorro real con 10k filas: ~1-2 MB, despreciable frente a TOAST de PostgreSQL.
 - PostgreSQL ya tiene `ENUM` nativo que almacena como int interno pero devuelve string — no hay trade-off.
-- Perderíamos legibilidad (`SELECT * FROM pacientes` devuelve `sexo=0` en vez de `'M'`).
+- Perderíamos legibilidad (`SELECT * FROM pacientes` devuelve `sexo=0` en vez de `'M'`).*
 
 > Pues no toquemos nada, que toca hacer ahora?
 

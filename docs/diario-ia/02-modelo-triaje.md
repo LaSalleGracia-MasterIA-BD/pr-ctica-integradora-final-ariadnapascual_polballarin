@@ -20,7 +20,7 @@ El enunciado pide **dos modelos de IA**: uno general (§3.1, puede ser tabular) 
 
 > Claro es triaje, generaremos un dataset con muchos ejemplos y el modelo entrenará con eso, luego tendremos un formulario en el dashboard para ingresar "fichas de clientes" es decir, como si un cliente entrara a la web del hospital y se registrara para recibir una visita medica.
 
-*Aterriza el caso de uso: **triaje pre-consulta web**. La IA propuso 15 features (edad, sexo, peso, altura, enfermedades crónicas, fumador, embarazo, motivo, duración, dolor 0-10, fiebre subjetiva, dificultad respiratoria, tos, contacto COVID, hora_envio como **variable espuria intencional**).*
+*Aterriza el caso de uso: **triaje pre-consulta web**. La IA propuso 15 features (edad, sexo, peso, altura, enfermedades crónicas, fumador, embarazo, motivo, duración, dolor 0-10, fiebre subjetiva, dificultad respiratoria, tos, contacto COVID, hora_envio como **variable espuria intencional**).* 
 
 > Lo de constantes vitales no tiene sentido, la gente no sabe esto. Que otros campos podriamos meter?
 
@@ -28,7 +28,7 @@ El enunciado pide **dos modelos de IA**: uno general (§3.1, puede ser tabular) 
 
 > Quiero 100k no 10k, así el modelo será mejor; Que modelo usaremos? Cual es el que mejor puede ir?
 
-*Aviso honesto de la IA: con dataset sintético + reglas deterministas + 10% de ruido, el techo de accuracy lo fija el ruido, no el volumen. De 10k a 100k la diferencia en F1 macro era < 1pp. Dejé 10k. Para el modelo: `HistGradientBoostingClassifier` de sklearn (mismo rendimiento que XGBoost/LightGBM pero sin dependencias extras, maneja nulos y categóricos nativamente).*
+*Aviso honesto de la IA: con dataset sintético + reglas deterministas + 10% de ruido, el techo de accuracy lo fija el ruido, no el volumen. De 10k a 100k la diferencia en F1 macro era < 1pp. Dejé 10k. Para el modelo: `HistGradientBoostingClassifier` de sklearn (mismo rendimiento que XGBoost/LightGBM pero sin dependencias extras, maneja nulos y categóricos nativamente).* 
 
 > Dale pues 10k entonces, Ok el modelo ese
 

@@ -73,200 +73,84 @@ En la fase final del proyecto se cerró la parte de **Infraestructura y Sistemas
 Se añadió un despliegue con:
 
 - `dask-scheduler`;
-- `dask-worker`;
-- integración del pipeline con `dask.dataframe`;
-- dashboard en `http://localhost:8787`.
 
-La ingesta batch registra metadatos como:
+# 99 — Reflexión crítica y estimación de impacto
 
-```json
-{
-  "processing_engine": "dask",
-  "dask_partitions": 1,
-  "dask_blocksize": "16MB",
-  "dask_scheduler": "tcp://dask-scheduler:8786"
-}
+## 1. Dónde aportó valor la IA
 
-Modelos tabulares operativos
+### Aportes claros y medibles
 
-Se entrenaron dentro de Docker dos modelos:
+- Velocidad de redacción de artefactos largos: los SDDs y DESIGN docs se generaron en horas en vez de días.
+- Plantillas y consistencia: estructura uniforme en todos los documentos.
+- Detección de bugs por lectura: errores de healthcheck, volúmenes, YAML, detectados antes de ejecutar.
+- Razonamiento sobre decisiones técnicas: argumentos operativos y técnicos mejor fundamentados.
+- Trabajo tedioso repetitivo: pinnear versiones, ajustar CSS, reescribir configs.
+- Depuración de infraestructura distribuida: integración de servicios, resolución de errores reales de entorno.
+- Validación contra el enunciado: revisión punto por punto de los requisitos.
+- Diseño de pruebas demostrables: batch con Dask, healthcheck, consulta real a Loki, CSV inválido, persistencia y alertas.
 
-modelo de triaje;
-modelo de sospecha de enfermedad.
+### Aportes menos tangibles
 
-El healthcheck final de ml-triage devolvió:
+- Memoria entre sesiones: persistencia de decisiones en memory files.
+- Presión metodológica: la IA se opuso a inflar el scope sin ganancia.
 
-{
-  "status": "ok",
-  "triage_version": "tri-20260514-60eff3c2",
-  "disease_version": "dis-20260514-8c9a3874"
-}
-Logging centralizado con Loki y Promtail
+## 2. Dónde hubo que corregir
 
-Se desplegaron loki y promtail dentro de Docker Compose. La validación final no se basó solo en healthchecks, sino en una consulta real a Loki:
+- Asumir features no realistas: propuesta de constantes vitales para un formulario auto-reportado.
+- Plantilla SDD con diseño mezclado: error de estructura inicial, corregido tras revisión de la metodología.
+- Parches en bucle: intentos repetidos de arreglar Loki antes de migrar a versión nueva.
+- Tema heredado del SO: CSS no bastaba, fue necesario forzar el tema en config.toml.
+- Problemas de quoting en PowerShell: solución con variables y EscapeDataString.
+- Promtail capturando logs de otros proyectos: filtrado y reinicio necesarios.
+- Conflictos en MongoDB con $setOnInsert y $set: separación de campos de inserción y actualización.
+- Falsa sensación de éxito en Loki: validación solo con eventos reales, no solo healthchecks.
 
-$query = '{compose_service="pipeline"} |= "pipeline.run.end"'
-$url = "http://localhost:3100/loki/api/v1/query_range?limit=10&start=$start&end=$end&query=$([uri]::EscapeDataString($query))"
-curl.exe -s $url
+## 3. Patrones de prompt efectivos
 
-La respuesta incluyó un stream con:
+- Prompts directivos y ricos en contexto: rol, estructura, vistas, disposición, paleta.
+- Prompts de clarificación conceptual: preguntar antes de asumir.
+- Prompts de objeción razonada: pedir argumentos antes de ejecutar cambios.
+- Prompts con metamaterial: aportar material docente para alinear metodología.
 
-{
-  "compose_project": "practica_hospital_ariadnapascualpolballarin",
-  "compose_service": "pipeline",
-  "event": "pipeline.run.end"
-}
-Calidad de datos
+## 4. Evidencias finales
 
-Se creó un CSV inválido:
+### Infraestructura y sistemas de Big Data
 
-patients/quality-test-invalid.csv
+- Dask integrado con pipeline y dashboard.
+- Modelos tabulares entrenados y validados en Docker.
+- Logging centralizado con Loki y Promtail, validado con eventos reales.
+- Calidad de datos: detección y persistencia de rechazos en MongoDB.
+- Alertas operativas: servicio automation con deduplicación y notificación simulada.
 
-El pipeline detectó correctamente registros incompletos o corruptos:
+### Deep Learning radiografías
 
-{
-  "records_in": 5,
-  "valid": 1,
-  "rejected": 4,
-  "rejects_persisted": 4
-}
+- Dataset limpio, sin máscaras.
+- Comparación experimental entre simple_cnn, resnet18 y efficientnet_b0.
+- Selección de EfficientNet-B0 por F1 macro y recall clínicamente relevantes.
+- Validación de endpoints y predicciones reales en Docker.
+- Integración completa con el dashboard.
 
-Los rechazos quedaron persistidos en MongoDB en ingestion_rejects, con motivos como:
+## 5. Estimación de productividad
 
-missing_field:edad;
-sexo:enum;
-intensidad_dolor:max:10.
-Alertas operativas
-
-Se implementó el servicio automation, que revisa eventos warning y error en system_events y crea alertas deduplicadas en MongoDB.
-
-Ejemplo de log:
-
-Nueva alerta creada: pipeline.validation.done:<run_id>:warning | Validación: 1 válidos, 4 rechazados
-Nueva alerta creada: pipeline.rejects.persisted:<run_id>:warning | 4 rechazos persistidos en ingestion_rejects
-
-Ejemplo de documento en alerts:
-
-{
-  "source_event": "pipeline.validation.done",
-  "severity": "warning",
-  "status": "open",
-  "notification_channel": "mongo_dashboard",
-  "notification_status": "simulated"
-}
-
-Con esto quedan demostrados los tres requisitos de monitorización y calidad:
-
-logging centralizado;
-validación de calidad de datos;
-alertas ante fallos o eventos anómalos.
-
-
-## 3.2. Evidencias finales añadidas tras la fase de Deep Learning radiografías
-
-En la fase final del módulo de redes neuronales se completó una comparación experimental entre tres enfoques para clasificación triple de radiografías de tórax:
-
-- `simple_cnn`: CNN simple entrenada desde cero como baseline.
-- `resnet18`: modelo preentrenado con transfer learning.
-- `efficientnet_b0`: modelo preentrenado con transfer learning y arquitectura eficiente.
-
-El dataset se limpió para usar únicamente imágenes reales dentro de carpetas `images/`, excluyendo explícitamente las carpetas `masks/`. Esta corrección fue importante porque inicialmente el script podía recoger máscaras binarias, lo que habría contaminado el entrenamiento y producido métricas artificiales o clínicamente inválidas.
-
-La preparación final del dataset generó 1000 imágenes por clase final:
-
-- `Sana`: procedente de `Normal/images`.
-- `Neumonía`: procedente de `Viral Pneumonia/images` + `Lung_Opacity/images`.
-- `COVID-19`: procedente de `COVID/images`.
-
-La comparación final obtuvo:
-
-| Modelo | Accuracy | F1 macro | Recall COVID-19 | Recall Neumonía |
-|---|---:|---:|---:|---:|
-| EfficientNet-B0 | 0.9600 | 0.9601 | 0.9800 | 0.9333 |
-| ResNet18 | 0.8933 | 0.8929 | 0.9667 | 0.8333 |
-| CNN simple | 0.7022 | 0.7013 | 0.7000 | 0.7733 |
-
-El modelo seleccionado fue `EfficientNet-B0`, versión:
-
-`rx-efficientnetb0-20260515-2b92eec9`
-
-La elección no se basó únicamente en accuracy. Se priorizó:
-
-- `F1 macro`, para equilibrar las tres clases.
-- `recall_covid`, por el riesgo clínico y epidemiológico de falsos negativos.
-- `recall_neumonia`, por el riesgo de retrasar tratamiento respiratorio.
-- matriz de confusión, para entender qué errores cometía cada modelo.
-
-El endpoint `/healthz` quedó validado:
-
-```json
-{"status":"ok","model_ready":true}
-
-También se probaron predicciones reales desde el contenedor con imágenes de las tres clases:
-
-COVID-19.
-Normal.
-Viral Pneumonia.
-Lung Opacity.
-
-La pestaña Radiografías del dashboard quedó integrada y funcional. El dashboard llama internamente a:
-
-http://ml-inference:8001/predict
-
-Esto fue importante porque dentro de Docker Compose no se debe llamar a localhost, ya que localhost dentro del contenedor del dashboard apunta al propio dashboard, no al servicio ml-inference.
-
-Decisión crítica
-
-El punto más importante de esta fase no fue conseguir una accuracy alta, sino evitar una evaluación engañosa. La detección de rutas con masks/ dentro de los CSV permitió corregir el dataset antes de defender resultados. Si se hubieran usado máscaras en lugar de radiografías, el modelo habría aprendido patrones que no representan imágenes clínicas reales.
-
-
-
-
-## 4. Estimación de productividad
-
-**Tiempo real invertido** en la conversación principal: ~4 días laborales efectivos, combinando trabajo manual, Claude Code como pair programmer dentro del repositorio y ChatGPT como apoyo de arquitectura, depuración, comandos de verificación y redacción técnica.
-
-**Output producido** (medido en commits reales del repo, descontando merges):
-
-| Bloque | Tiempo estimado sin IA | Con IA |
+| Bloque | Sin IA | Con IA |
 |---|---|---|
-| 7 SDDs + 4 DESIGN docs | 3-4 días | 1 día |
-| Pipeline ETL (batch + online, 22 módulos Python, YAML rules, seed) | 3-4 días | 1 día |
-| Modelo triaje (generador sintético + entreno + evaluate + CV + servicio HTTP) | 2-3 días | 0.5 día |
-| API (3 endpoints listado + PDF generator) | 1-2 días | 0.3 día |
-| Dashboard v2 (Streamlit con CSS custom + menú horizontal + formulario + PDF download + timeline polling) | 2-3 días | 0.7 día |
-| Bump de versiones + fixes de config (Loki, healthchecks, credenciales) | 1 día | 0.3 día |
-| Memoria de decisiones + trazabilidad en CHANGELOG | 0.5 día | intrínseco (parte de cada commit) |
+| SDDs + DESIGN docs | 3-4 días | 1 día |
+| Pipeline ETL | 3-4 días | 1 día |
+| Modelo triaje | 2-3 días | 0.5 día |
+| API | 1-2 días | 0.3 día |
+| Dashboard v2 | 2-3 días | 0.7 día |
+| Bump de versiones + fixes | 1 día | 0.3 día |
+| Memoria de decisiones | 0.5 día | intrínseco |
 | **Total estimado** | **12-17 días** | **~4 días** |
 
-**Factor de productividad observado**: **~3-4×** en este proyecto concreto. No lo interpreto como una métrica universal: dependió mucho de tener specs claras, validar cada cambio con comandos reales y no aceptar código generado sin revisión.
+Factor de productividad observado: **~3-4×**. No es universal: depende de tener specs claras y validar cada cambio. El juicio crítico sigue siendo imprescindible.
 
-**Pero hay un coste oculto**: la revisión crítica sigue requiriendo tiempo humano. Aceptar ciegamente produce deuda:
-- El primer `validation_rules.yaml` con `no` sin comillas habría arrasado la ingesta si no fuera por el smoke test.
-- La propuesta de constantes vitales en el formulario habría producido una UX rota.
-- Python 3.13 "porque es lo más nuevo" habría roto el build.
+## 6. Conclusión para la práctica
 
-**Conclusión**: la IA aporta **velocidad**, pero el juicio sigue siendo humano. El multiplicador real de productividad depende de la atención crítica del operador.
+En un proyecto de 3 semanas con 1-2 personas, la IA permitió entregar un sistema completo (modelos IA, pipeline, API, dashboard, infraestructura, documentación) en tiempo récord, sin recortar funcionalidades clave. La IA no sustituyó el juicio humano, pero aceleró la toma de decisiones y la coherencia documental.
 
-## 5. Conclusión para la práctica
+Algunas decisiones defendidas por la IA (MinIO sobre AWS, rechazar dataset de 100k, no pasar booleanos a 0/1) resultaron mejores que las iniciales del usuario.
 
-En un proyecto de 3 semanas con un equipo de 1-2 personas,**Claude Code como pair programmer y ChatGPT como apoyo de arquitectura/debugging** permitió entregar un sistema con:
+## 7. Consideraciones éticas
 
-- **Dos modelos de IA** (uno tabular entrenado en vivo, uno DL diferido).
-- **Pipeline de datos con patrón landing zone** (MinIO S3-compat + PostgreSQL + MongoDB/GridFS).
-- **API completa** con 3 endpoints del flujo + 3 de listado/detalle/PDF.
-- **Dashboard Streamlit** con diseño clínico, PDF descargable, timeline de eventos.
-- **más de 15 servicios** en Docker Compose, levantables con un único `docker compose up -d`.
-- **Documentación SDD + DESIGN** exhaustiva en markdown, siguiendo la metodología del Master.
-
-Sin la IA, el mismo scope habría requerido más tiempo del disponible o un recorte funcional severo.
-
-La IA **no me sustituyó**: me obligó a tomar decisiones más rápido y a argumentarlas mejor, porque cada cambio arrastraba documentación, spec, código y CHANGELOG de forma coherente.
-
-**Honestidad final**: algunas decisiones que la IA defendió mejor que yo (MinIO sobre AWS real, rechazar el dataset de 100k, rechazar pasar booleanos a 0/1) habrían sido peores si yo hubiera insistido. Esa capacidad de argumentar en contra — y cambiar mi propia decisión — es probablemente el aporte más valioso, por encima de la velocidad de tecleo.
-
-## Consideraciones éticas trabajadas con IA
-
-Durante el desarrollo se usó IA no solo para generar código, sino también para revisar riesgos del sistema. La discusión permitió identificar que, en un entorno sanitario, no basta con maximizar accuracy. Se priorizó el análisis de falsos negativos, especialmente COVID-19 y Neumonía, porque tienen mayor impacto clínico que ciertos falsos positivos.
-
-También se revisó la necesidad de no subir datasets, pesos ni `.env` al repositorio, y de documentar claramente que el sistema es académico y no sustituye el criterio médico.
+La IA se usó también para revisar riesgos y priorizar el análisis de falsos negativos en COVID-19 y Neumonía. Se evitó subir datasets, pesos y `.env` al repo, y se documentó que el sistema es académico y no sustituye criterio médico.

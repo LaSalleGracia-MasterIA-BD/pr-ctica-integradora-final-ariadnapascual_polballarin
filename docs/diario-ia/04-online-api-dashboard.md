@@ -1,3 +1,4 @@
+
 # 04 — API del flujo + dashboard v1 + vista Pacientes con PDF
 
 ## Contexto
