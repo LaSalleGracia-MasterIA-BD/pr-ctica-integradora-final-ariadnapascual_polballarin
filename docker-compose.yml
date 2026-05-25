@@ -363,10 +363,11 @@ services:
     networks:
       - hospital-net
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:80/misc/ping || exit 1"]
+      test: ["CMD-SHELL", "/venv/bin/python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1/misc/ping', timeout=5)\" || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 30s
     logging:
       driver: json-file
       options:
@@ -377,9 +378,9 @@ services:
   mongo-express:
     image: mongo-express:1.0.2
     environment:
-      ME_CONFIG_MONGODB_SERVER: mongodb
-      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_INITDB_ROOT_USERNAME}
-      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/?authSource=admin
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: pass
       ME_CONFIG_OPTIONS_EDITORTHEME: default
     ports:
       - "8081:8081"
@@ -388,10 +389,11 @@ services:
     networks:
       - hospital-net
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8081 || exit 1"]
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://admin:pass@127.0.0.1:8081', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))\""]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 30s
     logging:
       driver: json-file
       options:
